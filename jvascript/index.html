@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>🍽 Food Memory Match — Levels (Image Backgrounds)</title>
+<style>
+  :root{
+    --accent:#ff7e5f;
+    --accent-dark:#eb6a4c;
+    --glass: rgba(255,255,255,0.88);
+    --card-shadow: 0 6px 18px rgba(0,0,0,0.16);
+    --max-width:1200px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:"Segoe UI", Roboto, system-ui, -apple-system, "Helvetica Neue", Arial;color:#222}
+  body{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background-color:#111;
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+    transition:background-image .6s ease, background-color .3s ease;
+  }
+
+  /* wrapper so screens don't touch edges */
+  .wrap{
+    width:100%;
+    max-width:1200px;
+    margin:20px;
+  }
+
+  header{
+    width:100%;
+    padding:14px 0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  h1{margin:0;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,0.5)}
+
+  /* Screens */
+  .screen{
+    width:100%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    border-radius:14px; padding:18px; box-shadow:var(--card-shadow);
+    display:none; min-height:68vh;
+    backdrop-filter: blur(6px);
+  }
+  .screen.active{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px}
+
+  /* MENU */
+  #menu { text-align:center; color:#fff; align-items:center; justify-content:center; }
+  .menu-inner{ width:100%; max-width:980px; display:flex; flex-direction:column; gap:18px; align-items:center; }
+  .menu-hint{ color: rgba(255,255,255,0.85); font-size:1rem; margin-top:4px }
+
+  .level-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fit,minmax(160px,1fr));
+    gap:18px;
+    width:100%;
+    align-items:stretch;
+    justify-items:center;
+  }
+  .level-card{
+    width:100%;
+    max-width:260px;
+    background:var(--glass);
+    border-radius:12px;
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    cursor:pointer;
+    box-shadow:0 10px 30px rgba(0,0,0,0.18);
+    transition: transform .18s ease, opacity .18s ease;
+    border:1px solid rgba(255,255,255,0.7);
+  }
+  .level-card:hover{ transform: translateY(-8px) scale(1.02) }
+  .level-card.locked{ opacity:0.55; cursor:not-allowed; transform:none }
+  .level-size{ font-weight:700; font-size:1.05rem; color:#3b2b2b }
+  .level-sub{ font-size:.92rem; color:#4b3a3a }
+  .stars{ display:flex; gap:6px; font-size:1.05rem; color:goldenrod }
+
+  /* Game */
+  #game { width:100%; max-width:980px; align-items:center; padding:16px 18px; }
+  .top-row{ width:100%; display:flex; gap:12px; justify-content:space-between; align-items:center; flex-wrap:wrap; color:#111 }
+  .stats{ display:flex; gap:12px; align-items:center; font-weight:700; background:rgba(255,255,255,0.92); padding:8px 12px; border-radius:10px }
+  .progress-wrap{ min-width:220px; }
+  .progress-bar{ height:12px; background: rgba(0,0,0,0.06); border-radius:10px; overflow:hidden; }
+  .progress-fill{ height:100%; background: linear-gradient(90deg,var(--accent), #ffd07f); width:0% }
+
+  .board-wrap{ width:100%; display:flex; justify-content:center; align-items:center; margin-top:12px; }
+  .game-board{ display:grid; gap:12px; justify-content:center; align-items:center; width:100%; padding:12px; background: rgba(255,255,255,0.70); border-radius:12px; box-shadow: 0 8px 24px rgba(0,0,0,0.14) }
+
+  .card{ background: white; border-radius:12px; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow: 0 6px 18px rgba(0,0,0,0.12); transform-style:preserve-3d; transition: transform .4s; position:relative; user-select:none; font-size:1.8rem }
+  .card.flip{ transform: rotateY(180deg) }
+  .face{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; backface-visibility:hidden; border-radius:12px }
+  .front{ background: linear-gradient(180deg,#fff,#fff); font-size:1.6rem; color:#444 }
+  .back{ transform: rotateY(180deg); font-size:2rem; background: linear-gradient(180deg,#fff,#fff) }
+  .card.matched{ pointer-events:none; opacity:1; transform: rotateY(180deg) }
+  .card.matched .front{ display:none }
+
+  .controls{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
+  .btn{ background:var(--accent); color:white; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:700 }
+  .btn.ghost{ background:transparent; color:var(--accent); border:2px solid var(--accent) }
+  .msg{ padding:10px 12px; border-radius:10px; background: rgba(255,250,240,0.95); font-weight:700; color:#333 }
+
+  /* responsive tweaks */
+  @media (min-width:900px){ .card{ font-size:2.6rem } }
+  @media (max-width:520px){ .card{ font-size:1.6rem } .level-card{ max-width:220px } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header><h1>🍽 Food Memory Match</h1></header>
+
+  <!-- MENU -->
+  <section id="menu" class="screen active" aria-label="Main menu">
+    <div class="menu-inner">
+      <div class="menu-hint">Tap a level to start — win a level <strong>3 times</strong> to unlock the next.</div>
+      <div class="level-grid" id="levelGrid" role="list"></div>
+    </div>
+  </section>
+
+  <!-- GAME -->
+  <section id="game" class="screen" aria-label="Game screen">
+    <div class="top-row">
+      <div class="stats">⏱ <span id="timerDisplay">0</span>s &nbsp; • &nbsp; 🎯 <span id="matchesDisplay">0</span></div>
+
+      <div class="progress-wrap">
+        <div style="font-size:.95rem;margin-bottom:6px" id="progressText">Progress</div>
+        <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+      </div>
+
+      <div class="controls">
+        <button id="menuBtn" class="btn ghost">🏠 Menu</button>
+        <button id="playAgainBtn" class="btn" style="display:none">🔁 Play Again</button>
+      </div>
+    </div>
+
+    <div class="board-wrap">
+      <div id="gameBoard" class="game-board" role="grid"></div>
+    </div>
+
+    <div style="display:flex;justify-content:center;margin-top:12px">
+      <div id="messageBox" class="msg" style="display:none"></div>
+    </div>
+  </section>
+</div>
+
+<!-- Audio fallback elements -->
+<audio id="bgAudio" loop preload="auto" src=""></audio>
+<audio id="timeoutAudio" preload="auto" src=""></audio>
+
+<script>
+/* ---------- IMAGE BACKGROUNDS ----------
+   Using Unsplash images (free to hotlink via source.unsplash.com).
+   You can replace these URLs with any image you prefer.
+*/
+const MENU_BG = "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1600&q=80";
+const LEVEL_BACKGROUNDS = [
+  "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1600&q=80", // level1
+  "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1600&q=80", // level2
+  "https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?auto=format&fit=crop&w=1600&q=80", // level3
+  "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=1600&q=80", // level4
+  "https://images.unsplash.com/photo-1422232897375-6d6a3be57b6e?auto=format&fit=crop&w=1600&q=80"  // level5
+];
+
+/* ---------- Game configuration (unchanged) ---------- */
+const levelDefs = [
+  { id:1, cols:2, rows:2, time:20, bgIndex:0 },
+  { id:2, cols:3, rows:4, time:30, bgIndex:1 },
+  { id:3, cols:4, rows:4, time:45, bgIndex:2 },
+  { id:4, cols:4, rows:5, time:60, bgIndex:3 },
+  { id:5, cols:4, rows:6, time:75, bgIndex:4 }
+];
+
+const foodPool = ['🍎','🍕','🍔','🍇','🍦','🥦','🍫','🍩','🍋','🍌','🍉','🥕','🌽','🥨','🧀','🍗','🍤','🍪','🍓','🥑','🍒','🍿','🍝','🍣','🥞'];
+const NEED_WINS = 3;
+
+/* ---------- State & UI refs ---------- */
+let levelProgress = JSON.parse(localStorage.getItem('mm_progress') || 'null') || Array(levelDefs.length).fill(0);
+let currentLevelIndex = 0;
+let firstCard=null, secondCard=null, lockBoard=false, matches=0, timer=null, timeLeft=0;
+let audioCtx=null, bgAudioUnlocked=false, bgLoopNode=null;
+
+const body = document.body;
+const menuScreen = document.getElementById('menu');
+const levelGrid = document.getElementById('levelGrid');
+const gameScreen = document.getElementById('game');
+const gameBoard = document.getElementById('gameBoard');
+const timerDisplay = document.getElementById('timerDisplay');
+const matchesDisplay = document.getElementById('matchesDisplay');
+const progressFill = document.getElementById('progressFill');
+const progressText = document.getElementById('progressText');
+const messageBox = document.getElementById('messageBox');
+const menuBtn = document.getElementById('menuBtn');
+const playAgainBtn = document.getElementById('playAgainBtn');
+
+/* ---------- Helpers ---------- */
+function saveProgress(){ localStorage.setItem('mm_progress', JSON.stringify(levelProgress)); }
+
+/* Render centered menu & level cards (alignment fixed) */
+function renderMenu(){
+  levelGrid.innerHTML = '';
+  levelDefs.forEach((lvl, idx) => {
+    const locked = idx > 0 && levelProgress[idx-1] < NEED_WINS;
+    const card = document.createElement('button');
+    card.className = 'level-card' + (locked ? ' locked' : '');
+    card.setAttribute('role','listitem');
+    card.innerHTML = `
+      <div class="level-size">Level ${idx+1}</div>
+      <div class="level-sub">${lvl.cols} × ${lvl.rows}</div>
+      <div class="stars" aria-hidden>${'★'.repeat(levelProgress[idx])}${'☆'.repeat(Math.max(0, NEED_WINS - levelProgress[idx]))}</div>
+      <div style="font-size:.85rem;color:#744">Wins: ${levelProgress[idx]} / ${NEED_WINS}</div>
+    `;
+    if(!locked) {
+      card.addEventListener('click', ()=> startLevel(idx));
+    }
+    levelGrid.appendChild(card);
+  });
+
+  // center the menu background and set body background to menu image
+  body.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.25), rgba(0,0,0,0.25)), url('${MENU_BG}')`;
+  body.style.backgroundSize = 'cover';
+  body.style.backgroundPosition = 'center';
+}
+
+/* ---------- Audio: WebAudio beeps & bg loop ---------- */
+function ensureAudio(){ if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+
+function beep(freq=440,dur=160,type='sine'){
+  ensureAudio();
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = type; o.frequency.value = freq; g.gain.value = 0.08;
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start();
+  const stopAt = audioCtx.currentTime + dur/1000;
+  g.gain.exponentialRampToValueAtTime(0.0001, stopAt);
+  o.stop(stopAt + 0.02);
+}
+
+function startBgLoop(){
+  ensureAudio();
+  if(bgLoopNode) return;
+  const master = audioCtx.createGain(); master.gain.value = 0.05; master.connect(audioCtx.destination);
+  bgLoopNode = { stop:false };
+  bgLoopNode.interval = setInterval(()=>{
+    if(bgLoopNode.stop) return;
+    const freqs = [440, 550, 660, 880];
+    for(let i=0;i<4;i++){
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.value = freqs[i] % 880;
+      g.gain.value = 0.06;
+      o.connect(g); g.connect(master);
+      const t0 = audioCtx.currentTime + i*0.08;
+      o.start(t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16); o.stop(t0 + 0.18);
+    }
+  }, 360);
+}
+function stopBgLoop(){ if(bgLoopNode){ bgLoopNode.stop = true; clearInterval(bgLoopNode.interval); bgLoopNode = null; } }
+
+function playTimeoutSound(){ beep(650,140); setTimeout(()=>beep(520,190),150); setTimeout(()=>beep(360,320),340); }
+
+/* ---------- Board generation & preview ---------- */
+function createCardArray(cols,rows){
+  let total = cols*rows;
+  if(total % 2 !== 0) total += 1;
+  const pairs = total/2;
+  const slice = foodPool.slice(0,pairs);
+  let arr = [...slice, ...slice];
+  for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+  return arr;
+}
+
+/* ---------- Navigation helpers ---------- */
+function showMenu(){
+  stopBgLoop();
+  menuScreen.classList.add('active');
+  gameScreen.classList.remove('active');
+  renderMenu();
+}
+function showGame(){ menuScreen.classList.remove('active'); gameScreen.classList.add('active'); }
+
+/* ---------- Start level ---------- */
+function startLevel(index){
+  currentLevelIndex = index;
+  // start audio on first user action
+  if(!bgAudioUnlocked){
+    ensureAudio(); if(audioCtx.state === 'suspended') audioCtx.resume();
+    startBgLoop(); bgAudioUnlocked = true;
+  }
+  prepareBoardForLevel(levelDefs[index]);
+  showGame();
+}
+
+/* ---------- Build UI for level (keeps everything else unchanged) ---------- */
+function prepareBoardForLevel(def){
+  messageBox.style.display = 'none';
+  playAgainBtn.style.display = 'none';
+  matches = 0; matchesDisplay.textContent = '0';
+
+  const curWins = levelProgress[currentLevelIndex] || 0;
+  const pct = Math.round((curWins/NEED_WINS)*100);
+  progressText.textContent = `Level ${currentLevelIndex+1}: ${curWins} / ${NEED_WINS} wins`;
+  progressFill.style.width = `${pct}%`;
+
+  const cols = def.cols, rows = def.rows;
+  const arr = createCardArray(cols, rows);
+
+  // set a nice level-specific background image (image + subtle dark overlay)
+  const bgURL = LEVEL_BACKGROUNDS[ def.bgIndex % LEVEL_BACKGROUNDS.length ];
+  body.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.28), rgba(0,0,0,0.28)), url('${bgURL}')`;
+  body.style.backgroundSize = 'cover';
+  body.style.backgroundPosition = 'center';
+
+  // size tiles responsively
+  const minTile = Math.min(140, Math.max(72, Math.floor((980 - (cols-1)*12) / cols)));
+  gameBoard.style.gridTemplateColumns = `repeat(${cols}, ${minTile}px)`;
+
+  gameBoard.innerHTML = '';
+  arr.forEach((emoji, i) => {
+    const d = document.createElement('div');
+    d.className = 'card flip';
+    d.dataset.val = emoji;
+    d.innerHTML = `<div class="face front">❓</div><div class="face back">${emoji}</div>`;
+    d.style.width = '100%';
+    d.style.aspectRatio = '1';
+    d.addEventListener('click', ()=>onCardClick(d));
+    gameBoard.appendChild(d);
+  });
+
+  // PREVIEW PHASE: show all cards for 3 seconds, then flip down and start timer
+  setTimeout(()=> {
+    document.querySelectorAll('.card').forEach(c => c.classList.remove('flip'));
+    startTimerForLevel(def.time);
+  }, 3000);
+}
+
+/* ---------- Timer ---------- */
+function startTimerForLevel(seconds){
+  timeLeft = seconds; timerDisplay.textContent = timeLeft;
+  if(timer) clearInterval(timer);
+  timer = setInterval(()=> {
+    timeLeft--;
+    timerDisplay.textContent = timeLeft;
+    if(timeLeft <= 0){
+      clearInterval(timer);
+      playTimeoutSound();
+      endLevel(false);
+    }
+  }, 1000);
+}
+
+/* ---------- Card click / match logic ---------- */
+function onCardClick(cardEl){
+  if(lockBoard || cardEl.classList.contains('matched')) return;
+  if(!bgAudioUnlocked){
+    ensureAudio(); if(audioCtx.state === 'suspended') audioCtx.resume();
+    startBgLoop(); bgAudioUnlocked = true;
+  }
+  cardEl.classList.add('flip');
+  if(!firstCard){ firstCard = cardEl; return; }
+  secondCard = cardEl;
+  lockBoard = true;
+  setTimeout(checkMatch, 180);
+}
+
+function checkMatch(){
+  const a = firstCard.dataset.val, b = secondCard.dataset.val;
+  if(a === b){
+    beep(880,80,'sine'); setTimeout(()=>beep(1100,120,'sine'),90);
+    firstCard.classList.add('matched'); secondCard.classList.add('matched');
+    matches++; matchesDisplay.textContent = matches;
+    resetFlipState();
+    const cols = levelDefs[currentLevelIndex].cols, rows = levelDefs[currentLevelIndex].rows;
+    if(matches === (cols*rows)/2){
+      endLevel(true);
+    }
+  } else {
+    beep(220,200,'square');
+    setTimeout(()=> { firstCard.classList.remove('flip'); secondCard.classList.remove('flip'); resetFlipState(); }, 420);
+  }
+}
+function resetFlipState(){ [firstCard, secondCard] = [null, null]; lockBoard = false; }
+
+/* ---------- End level ---------- */
+function endLevel(won){
+  if(timer){ clearInterval(timer); timer = null; }
+  if(won){
+    levelProgress[currentLevelIndex] = (levelProgress[currentLevelIndex]||0) + 1;
+    if(levelProgress[currentLevelIndex] > NEED_WINS) levelProgress[currentLevelIndex] = NEED_WINS;
+    saveProgress();
+    progressText.textContent = `Level ${currentLevelIndex+1}: ${levelProgress[currentLevelIndex]} / ${NEED_WINS} wins`;
+    progressFill.style.width = `${Math.round((levelProgress[currentLevelIndex]/NEED_WINS)*100)}%`;
+    messageBox.textContent = `🎉 You cleared Level ${currentLevelIndex+1}! (${levelProgress[currentLevelIndex]}/${NEED_WINS})`;
+    messageBox.style.display = 'block';
+  } else {
+    messageBox.textContent = `⏳ Time's up! Try again.`;
+    messageBox.style.display = 'block';
+  }
+  playAgainBtn.style.display = 'inline-block';
+  renderMenu(); // update locks
+}
+
+/* ---------- UI button events ---------- */
+menuBtn.addEventListener('click', ()=>{ showMenu(); });
+playAgainBtn.addEventListener('click', ()=>{ startLevel(currentLevelIndex); });
+
+/* ---------- Init ---------- */
+renderMenu();
+
+/* resume audio on keypress as fallback */
+document.addEventListener('keydown', ()=>{ if(!bgAudioUnlocked){ ensureAudio(); if(audioCtx.state==='suspended') audioCtx.resume(); startBgLoop(); bgAudioUnlocked=true; } }, {once:true});
+
+/* debug helper */
+window.clearProgress = ()=>{ levelProgress = Array(levelDefs.length).fill(0); saveProgress(); renderMenu(); alert('Progress cleared'); };
+
+</script>
+</body>
+</html>
